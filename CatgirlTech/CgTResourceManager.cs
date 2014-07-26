@@ -161,17 +161,35 @@ namespace CatgirlTech
                 else if (res != null && resources[i].managed)
                 {
                     // here's where we can do the stuff where we keep it at 0.5
-                    if (res.amount > 0.5)
-                    {
+                    if (managed_parts_count > 0 && (res.amount < 0.2 || res.amount > 0.8)){
                         // push res out to a managed part
-                    }
-                    else if (res.amount < 0.5)
-                    {
-                        // pull resource from a managed part
+                        internalResourceTransfer(res, 0.5 - res.amount);
                     }
                 }
             }
 
+        }
+
+        // internal transfer
+        private void internalResourceTransfer(PartResource res, double amount)
+        {
+            for (int i = 0; i < managed_parts.Count; i++)
+            {
+                if (managed_parts[i].managed)
+                {
+                    PartResource res_internal = getResource(managed_parts[i].part, res.resourceName);
+                    var res_def = PartResourceLibrary.Instance.GetDefinition(res.resourceName);
+                    if (res_internal != null)
+                    {
+                        double amount_result = managed_parts[i].part.TransferResource(res_def.id, amount*-1);
+                        if (amount_result != 0)
+                        {
+                            part.TransferResource(res_def.id, amount_result);
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
 
@@ -200,7 +218,7 @@ namespace CatgirlTech
             showGui = !showGui;
 
         }
-        [KSPAction("Toggle GUI")]
+        //[KSPAction("Toggle GUI")]
         public void toggleGuiAction(KSPActionParam param)
         {
             toggleGui();
