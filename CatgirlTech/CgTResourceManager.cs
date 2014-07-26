@@ -15,6 +15,8 @@ namespace CatgirlTech
         public string managed_resources_string;
         [KSPField(isPersistant = true)]
         public string managed_parts_string;
+        [KSPField(isPersistant = true)]
+        public bool fastIntake = true;
         [KSPField(isPersistant = false, guiActive = true, guiName = "Part Count")]
         public uint managed_parts_count;
 
@@ -48,37 +50,8 @@ namespace CatgirlTech
             base.OnStart(state);
             // my test codes
             //if (state == StartState.Editor) { return; }
-            for (int p = 0; p < this.vessel.parts.Count; p++)
-            {
-                if (this.vessel.parts[p].Resources.Count > 0)
-                {
-                    // add part
-                    managed_parts.Add(new ManagedPart(this.vessel.parts[p]));
-
-                    for (int i = 0; i < this.vessel.parts[p].Resources.Count; i++)
-                    {
-                        if (this.part != this.vessel.parts[p])
-                        {
-                            ManagedResource mr = new ManagedResource(this.vessel.parts[p].Resources[i]);
-
-                            bool isNew = true;
-                            for (int r = 0; r < resources.Count; r++)
-                            {
-                                if (resources[r].name == mr.name)
-                                {
-                                    isNew = false;
-                                }
-                            }
-                            if (isNew)
-                                resources.Add(mr);
-
-                        }
-
-                    }
-
-                }
-
-            }
+            // update the available resources.
+            upateAvailabeResourcesList();
             print("manged resources: " + managed_resources_string);
             if (managed_resources_string != "")
             {
@@ -217,6 +190,7 @@ namespace CatgirlTech
         //[KSPEvent(guiActive = true, guiActiveEditor = true, guiName = "Update Resource List", active = true)]
         private void updateResources()
         {
+            upateAvailabeResourcesList();
             for (int i = 0; i < resources.Count; i++)
             {
                 
@@ -239,17 +213,85 @@ namespace CatgirlTech
                 }
                 else if (res != null && resources[i].managed)
                 {
-                    double available_space = getResourceMaxAmount(res.resourceName) - getResourceAmount(res.resourceName) + 1;
-                    if (available_space > res.amount)
+                    if (fastIntake)
                     {
-                        res.maxAmount = available_space;
+                        double available_space = getResourceMaxAmount(res.resourceName) - getResourceAmount(res.resourceName) + 1;
+                        if (available_space < 1)
+                            available_space = 1;
+                        if (available_space > res.amount)
+                        {
+                            res.maxAmount = available_space;
+                        }
                     }
+                    else
+                        res.maxAmount = 1;
                     // here's where we can do the stuff where we keep it at 0.5
                     if (managed_parts_count > 0 && (res.amount < 0.2 || res.amount > 0.8)){
                         // push res out to a managed part
                         internalResourceTransfer(res, 0.5 - res.amount);
                     }
                 }
+            }
+
+        }
+
+        // update the available resources list
+        private void upateAvailabeResourcesList()
+        {
+            for (int p = 0; p < this.vessel.parts.Count; p++)
+            {
+                if (this.vessel.parts[p].Resources.Count > 0)
+                {
+                    // add part
+                    if (this.part != this.vessel.parts[p])
+                    {
+                        bool newPart = true;
+                        for (int np = 0; np < managed_parts.Count; np++)
+                        {
+                            if (managed_parts[np].part == this.vessel.parts[p])
+                            {
+                                newPart = false;
+                            }
+                        }
+
+                        if (newPart)
+                        {
+                            managed_parts.Add(new ManagedPart(this.vessel.parts[p]));
+
+                            for (int i = 0; i < this.vessel.parts[p].Resources.Count; i++)
+                            {
+
+                                PartResourceDefinition res_def = PartResourceLibrary.Instance.GetDefinition(this.vessel.parts[p].Resources[i].resourceName);
+                                if (res_def.resourceTransferMode == ResourceTransferMode.PUMP)
+                                {
+                                    if (res_def.density > 0)
+                                    {
+                                        ManagedResource mr = new ManagedResource(this.vessel.parts[p].Resources[i]);
+                                        bool isNew = true;
+                                        for (int r = 0; r < resources.Count; r++)
+                                        {
+                                            if (resources[r].name == mr.name)
+                                            {
+                                                isNew = false;
+                                            }
+
+                                        }
+                                        if (isNew)
+                                            resources.Add(mr);
+
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
             }
 
         }
@@ -386,6 +428,10 @@ namespace CatgirlTech
             hdSty.fontSize = 16;
             hdSty.fontStyle = FontStyle.Bold;
             hdSty.padding = new RectOffset(8, 8, 8, 8);
+            // header style
+            GUIStyle nSty = new GUIStyle(GUI.skin.label);
+            nSty.normal.textColor = hdSty.focused.textColor = Color.yellow;
+            nSty.fontSize = 10;
 
             // scroll area options
 
@@ -456,6 +502,9 @@ namespace CatgirlTech
                     GUILayout.EndHorizontal();
                     break;
             }
+            fastIntake = GUILayout.Toggle(fastIntake, "Fast Intake*");
+            if(fastIntake)
+                GUILayout.Label("*This will in effect double the vessel's max amount for managed resources in the vessel's resources viewer. It does however dramaticly increase the transfer rate.",nSty);
             if (GUILayout.Button("Close", mySty, GUILayout.ExpandWidth(true)))//GUILayout.Button is "true" when clicked
             {
                 RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
