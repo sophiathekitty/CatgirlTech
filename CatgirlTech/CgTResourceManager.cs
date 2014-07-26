@@ -11,14 +11,12 @@ namespace CatgirlTech
         public List<ManagedResource> resources = new List<ManagedResource>();
         //[KSPField(isPersistant = true)]
         public List<ManagedPart> managed_parts = new List<ManagedPart>();
-        [KSPField(isPersistant = true, guiActive = true, guiName = "Resources")]
+        [KSPField(isPersistant = true)]
         public string managed_resources_string;
         [KSPField(isPersistant = true)]
         public string managed_parts_string;
         [KSPField(isPersistant = false, guiActive = true, guiName = "Part Count")]
         public uint managed_parts_count;
-        [KSPField(guiActive = true, guiActiveEditor = true, guiUnits = "BadIdeas", guiName="Bad Ideas")]
-        public PartResource badIdeas = new PartResource();
 
         private bool showGui = true;
 
@@ -26,9 +24,8 @@ namespace CatgirlTech
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
-            badIdeas.maxAmount=100;
-            badIdeas.amount=50;
             // my test codes
+            ScreenMessages.PostScreenMessage("Hello?!", 6, ScreenMessageStyle.UPPER_CENTER);
             //if (state == StartState.Editor) { return; }
             for (int p = 0; p < this.vessel.parts.Count; p++)
             {
@@ -85,6 +82,7 @@ namespace CatgirlTech
                 managed_parts_string = partsString();
             onPartStart();
             //onFlightStart();
+            //updateResources();
         }
 
         //
@@ -92,7 +90,7 @@ namespace CatgirlTech
         //
         private string resourcesString()
         {
-            this.part.Resources.list.Clear();
+            
             string str = "";
             int mi = 0;
             for (int i = 0; i < resources.Count; i++)
@@ -103,13 +101,6 @@ namespace CatgirlTech
                         str += ", ";
                     str += resources[i].name;
                     mi++;
-
-
-                    this.part.Resources.Add(new ConfigNode(resources[i].name));
-                    this.part.Resources[i].resourceName = resources[i].name;
-                    this.part.Resources[i].amount = 10;
-                    this.part.Resources[i].maxAmount = 100;
-                    print("part resource bleh: " + this.part.Resources.Count);
                 }
             }
             return str;
@@ -145,10 +136,57 @@ namespace CatgirlTech
 
             managed_resources_string = resourcesString();
             managed_parts_string = partsString();
+            updateResources();
+
         }
 
+        [KSPEvent(guiActive = true, guiActiveEditor = true, guiName = "Update Resource List", active = true)]
+        private void updateResources()
+        {
+            for (int i = 0; i < resources.Count; i++)
+            {
+                PartResource res = getResource(part, resources[i].name);
+                if (res == null && resources[i].managed)
+                {
+                    ConfigNode node = new ConfigNode("RESOURCE");
+                    node.AddValue("name", resources[i].name);
+                    node.AddValue("amount", 0);
+                    node.AddValue("maxAmount", 1);
+                    res = part.AddResource(node);
+                }
+                else if (res != null && !resources[i].managed)
+                {
+                    part.Resources.list.Remove(res);
+                }
+                else if (res != null && resources[i].managed)
+                {
+                    // here's where we can do the stuff where we keep it at 0.5
+                    if (res.amount > 0.5)
+                    {
+                        // push res out to a managed part
+                    }
+                    else if (res.amount < 0.5)
+                    {
+                        // pull resource from a managed part
+                    }
+                }
+            }
+
+        }
+
+
+        public static PartResource getResource(Part part, string name)
+        {
+            PartResourceList resourceList = part.Resources;
+            return resourceList.list.Find(delegate(PartResource cur)
+            {
+                return (cur.resourceName == name);
+            });
+        }
+
+
         // toggle gui
-        [KSPEvent(guiActive = true,guiActiveEditor=true, guiName = "toggle gui", active = true)]
+        [KSPEvent(guiActive = true,guiActiveEditor=true, guiName = "Toggle GUI", active = true)]
         public void toggleGui()
         {
             if (showGui)
@@ -162,7 +200,7 @@ namespace CatgirlTech
             showGui = !showGui;
 
         }
-        [KSPAction("toggle gui")]
+        [KSPAction("Toggle GUI")]
         public void toggleGuiAction(KSPActionParam param)
         {
             toggleGui();
@@ -320,7 +358,7 @@ namespace CatgirlTech
             public string name;
             public int resourceID;
             // constructor
-            public ManagedResource(PartResource resource, bool _managed = true)
+            public ManagedResource(PartResource resource, bool _managed = false)
             {
                 name = resource.resourceName;
                 managed = _managed;
