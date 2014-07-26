@@ -18,6 +18,28 @@ namespace CatgirlTech
         [KSPField(isPersistant = false, guiActive = true, guiName = "Part Count")]
         public uint managed_parts_count;
 
+        // can show up to 10 resource types in this list?
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource1")]
+        public string resource_total_amount_display_1;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource2")]
+        public string resource_total_amount_display_2;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource3")]
+        public string resource_total_amount_display_3;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource4")]
+        public string resource_total_amount_display_4;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource5")]
+        public string resource_total_amount_display_5;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource6")]
+        public string resource_total_amount_display_6;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource7")]
+        public string resource_total_amount_display_7;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource8")]
+        public string resource_total_amount_display_8;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource9")]
+        public string resource_total_amount_display_9;
+        [KSPField(isPersistant = false, guiActive = false, guiName = "Resource10")]
+        public string resource_total_amount_display_10;
+
         private bool showGui = true;
 
 
@@ -25,7 +47,6 @@ namespace CatgirlTech
         {
             base.OnStart(state);
             // my test codes
-            ScreenMessages.PostScreenMessage("Hello?!", 6, ScreenMessageStyle.UPPER_CENTER);
             //if (state == StartState.Editor) { return; }
             for (int p = 0; p < this.vessel.parts.Count; p++)
             {
@@ -138,13 +159,67 @@ namespace CatgirlTech
             managed_parts_string = partsString();
             updateResources();
 
+            // update totals display
+            int ri = 1;
+            for (int i = 0; i < resources.Count; i++)
+            {
+                if (resources[i].managed)
+                {
+                    Fields["resource_total_amount_display_" + ri].guiName = resources[i].name;
+                    setResourceTotalAmountDisplay(ri, Math.Round(getResourceAmount(resources[i].name)) + "/" + Math.Round(getResourceMaxAmount(resources[i].name)));
+                    Fields["resource_total_amount_display_" + ri].guiActive = true;
+                    ri++;
+                }
+            }
+            for (int i = ri; i <= 10; i++)
+            {
+                Fields["resource_total_amount_display_" + ri].guiActive = false;
+            }
         }
+        private void setResourceTotalAmountDisplay(int i, string display_amount)
+        {
+            switch (i)
+            {
+                case 1:
+                    resource_total_amount_display_1 = display_amount;
+                    break;
+                case 2:
+                    resource_total_amount_display_2 = display_amount;
+                    break;
+                case 3:
+                    resource_total_amount_display_3 = display_amount;
+                    break;
+                case 4:
+                    resource_total_amount_display_4 = display_amount;
+                    break;
+                case 5:
+                    resource_total_amount_display_5 = display_amount;
+                    break;
+                case 6:
+                    resource_total_amount_display_6 = display_amount;
+                    break;
+                case 7:
+                    resource_total_amount_display_7 = display_amount;
+                    break;
+                case 8:
+                    resource_total_amount_display_8 = display_amount;
+                    break;
+                case 9:
+                    resource_total_amount_display_9 = display_amount;
+                    break;
+                case 10:
+                    resource_total_amount_display_10 = display_amount;
+                    break;
+            }
+        }
+     
 
-        [KSPEvent(guiActive = true, guiActiveEditor = true, guiName = "Update Resource List", active = true)]
+        //[KSPEvent(guiActive = true, guiActiveEditor = true, guiName = "Update Resource List", active = true)]
         private void updateResources()
         {
             for (int i = 0; i < resources.Count; i++)
             {
+                
                 PartResource res = getResource(part, resources[i].name);
                 if (res == null && resources[i].managed)
                 {
@@ -156,10 +231,19 @@ namespace CatgirlTech
                 }
                 else if (res != null && !resources[i].managed)
                 {
+                    if (res.amount > 0)
+                    {
+                        internalResourceTransfer(res, res.amount*-1);
+                    }
                     part.Resources.list.Remove(res);
                 }
                 else if (res != null && resources[i].managed)
                 {
+                    double available_space = getResourceMaxAmount(res.resourceName) - getResourceAmount(res.resourceName) + 1;
+                    if (available_space > res.amount)
+                    {
+                        res.maxAmount = available_space;
+                    }
                     // here's where we can do the stuff where we keep it at 0.5
                     if (managed_parts_count > 0 && (res.amount < 0.2 || res.amount > 0.8)){
                         // push res out to a managed part
@@ -192,6 +276,55 @@ namespace CatgirlTech
             }
         }
 
+        //
+        // return the amount of a resource available among all managed parts and any inside this part.
+        //
+        private double getResourceAmount(string resource_name)
+        {
+            double amount = 0.0;
+            if (managed_parts_count != 0)
+            {
+                for (int i = 0; i < managed_parts.Count; i++)
+                {
+                    if (managed_parts[i].managed)
+                    {
+                        PartResource res = getResource(managed_parts[i].part, resource_name);
+                        if (res != null)
+                        {
+                            amount += res.amount;
+                        }
+                    }
+                }
+            }
+            PartResource res_me = getResource(part, resource_name);
+            if (res_me != null)
+            {
+                amount += res_me.amount;
+            }
+            return amount;
+        }
+        //
+        // return the amount of a resource available among all managed parts and any inside this part.
+        //
+        private double getResourceMaxAmount(string resource_name)
+        {
+            double amount = 0.0;
+            if (managed_parts_count != 0)
+            {
+                for (int i = 0; i < managed_parts.Count; i++)
+                {
+                    if (managed_parts[i].managed)
+                    {
+                        PartResource res = getResource(managed_parts[i].part, resource_name);
+                        if (res != null)
+                        {
+                            amount += res.maxAmount;
+                        }
+                    }
+                }
+            }
+            return amount;
+        }
 
         public static PartResource getResource(Part part, string name)
         {
@@ -204,16 +337,18 @@ namespace CatgirlTech
 
 
         // toggle gui
-        [KSPEvent(guiActive = true,guiActiveEditor=true, guiName = "Toggle GUI", active = true)]
+        [KSPEvent(guiActive = true, guiName = "Toggle GUI", active = true)]
         public void toggleGui()
         {
             if (showGui)
             {
                 RenderingManager.AddToPostDrawQueue(3, new Callback(drawGUI));//start the GUI
+                Events["toggleGui"].guiName = "Hide Setup";
             }
             else
             {
                 RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
+                Events["toggleGui"].guiName = "Show Setup";
             }
             showGui = !showGui;
 
@@ -325,6 +460,7 @@ namespace CatgirlTech
             {
                 RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
                 showGui = true;
+                Events["toggleGui"].guiName = "Show Setup";
             }
             GUILayout.EndVertical();
 
@@ -354,15 +490,15 @@ namespace CatgirlTech
         protected void onPartDestroy()
         {
             RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI)); //close the GUI
+            Events["toggleGui"].guiName = "Show Setup";
+            showGui = false;
         }
         public override void OnInactive()
         {
             base.OnInactive();
             onPartDestroy();
         }
-        
-        
-        
+
         //
         //
         // member classes?
@@ -375,6 +511,8 @@ namespace CatgirlTech
             public bool managed;
             public string name;
             public int resourceID;
+            public double amount;
+            public double maxAmount;
             // constructor
             public ManagedResource(PartResource resource, bool _managed = false)
             {
