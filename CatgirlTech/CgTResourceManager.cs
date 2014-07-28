@@ -8,6 +8,11 @@ namespace CatgirlTech
 {
     class CgTResourceManager : PartModule
     {
+        //[KSPField(guiActive = true, guiName = "Max Resource Types")]
+        public float maxManagedResources;
+        //[KSPField(guiActive = true, guiName = "Max Parts")]
+        public float maxManagedParts;
+
         public List<ManagedResource> resources = new List<ManagedResource>();
         //[KSPField(isPersistant = true)]
         public List<ManagedPart> managed_parts = new List<ManagedPart>();
@@ -42,17 +47,19 @@ namespace CatgirlTech
         [KSPField(isPersistant = false, guiActive = false, guiName = "Resource10")]
         public string resource_total_amount_display_10;
 
-        private bool showGui = true;
 
+        private bool showGui = true;
 
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
-            // my test codes
-            //if (state == StartState.Editor) { return; }
+
             // update the available resources.
             upateAvailabeResourcesList();
-            print("manged resources: " + managed_resources_string);
+
+            
+            // load in persistent data
+            //print("manged resources: " + managed_resources_string);
             if (managed_resources_string != "")
             {
                 // load resources managed.
@@ -63,13 +70,13 @@ namespace CatgirlTech
             } else
                 managed_resources_string = resourcesString();
 
-            print("manged parts: " + managed_parts_string);
+            //print("manged parts: " + managed_parts_string);
             if (managed_parts_string != "")
             {
                 string[] parts_index_str = managed_parts_string.Split(',');
                 for (int i = 0; i < parts_index_str.Length; i++)
                 {
-                    print("managed part: " + parts_index_str[i]);
+                   // print("managed part: " + parts_index_str[i]);
                     managed_parts[int.Parse(parts_index_str[i])].managed = true;
                 }
             } else
@@ -274,7 +281,6 @@ namespace CatgirlTech
                                             {
                                                 isNew = false;
                                             }
-
                                         }
                                         if (isNew)
                                             resources.Add(mr);
@@ -379,7 +385,7 @@ namespace CatgirlTech
 
 
         // toggle gui
-        [KSPEvent(guiActive = true, guiName = "Toggle GUI", active = true)]
+        [KSPEvent(guiActive = true, guiName = "Show Setup", active = true)]
         public void toggleGui()
         {
             if (showGui)
@@ -447,6 +453,7 @@ namespace CatgirlTech
                     }
                     // managed resources gui window goes here
                     GUILayout.Label("Managed Resource:", hdSty, GUILayout.ExpandWidth(true));
+                    GUILayout.Label("Select up to "+maxManagedResources);
                     scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true,GUILayout.Height(200));
                     GUILayout.BeginVertical();
                     for (int i = 0; i < resources.Count(); i++)
@@ -469,6 +476,7 @@ namespace CatgirlTech
                     }
                     // managed part gui window goes here
                     GUILayout.Label("Managed Parts:", hdSty, GUILayout.ExpandWidth(true));
+                    GUILayout.Label("Select up to "+maxManagedParts);
                     scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, true,GUILayout.Height(200));
                     GUILayout.BeginVertical();
                     for (int i = 0; i < managed_parts.Count(); i++)
@@ -547,6 +555,11 @@ namespace CatgirlTech
             base.OnInactive();
             onPartDestroy();
         }
+
+        
+
+        
+
 
         //
         //
