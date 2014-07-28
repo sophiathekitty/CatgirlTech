@@ -8,9 +8,9 @@ namespace CatgirlTech
 {
     class CgTResourceManager : PartModule
     {
-        [KSPField(isPersistant = true, guiActive = true, guiName = "Max Resource Types")]
+        [KSPField(isPersistant = true)]
         public float maxManagedResources;
-        [KSPField(isPersistant = true,guiActive = true, guiName = "Max Parts")]
+        [KSPField(isPersistant = true)]
         public float maxManagedParts;
 
         public List<ManagedResource> resources = new List<ManagedResource>();
@@ -22,8 +22,10 @@ namespace CatgirlTech
         public string managed_parts_string;
         [KSPField(isPersistant = true)]
         public bool fastIntake = true;
-        [KSPField(isPersistant = false, guiActive = true, guiName = "Part Count")]
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Parts")]
         public uint managed_parts_count;
+        [KSPField(isPersistant = false, guiActive = true, guiName = "Resources")]
+        public uint managed_resource_count;
 
         // can show up to 10 resource types in this list?
         [KSPField(isPersistant = false, guiActive = false, guiName = "Resource1")]
@@ -53,7 +55,8 @@ namespace CatgirlTech
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
-
+            Fields["managed_parts_count"].guiUnits = "/" + maxManagedParts;
+            Fields["managed_resource_count"].guiUnits = "/" + maxManagedResources;
             // update the available resources.
             upateAvailabeResourcesList();
 
@@ -93,15 +96,15 @@ namespace CatgirlTech
         {
             
             string str = "";
-            int mi = 0;
+            managed_resource_count = 0;
             for (int i = 0; i < resources.Count; i++)
             {
                 if (resources[i].managed)
                 {
-                    if (mi > 0)
+                    if (managed_resource_count > 0)
                         str += ", ";
                     str += resources[i].name;
-                    mi++;
+                    managed_resource_count++;
                 }
             }
             return str;
