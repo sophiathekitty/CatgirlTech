@@ -8,9 +8,9 @@ namespace CatgirlTech
 {
     class CgTResourceManager : PartModule
     {
-        //[KSPField(guiActive = true, guiName = "Max Resource Types")]
+        [KSPField(isPersistant = true, guiActive = true, guiName = "Max Resource Types")]
         public float maxManagedResources;
-        //[KSPField(guiActive = true, guiName = "Max Parts")]
+        [KSPField(isPersistant = true,guiActive = true, guiName = "Max Parts")]
         public float maxManagedParts;
 
         public List<ManagedResource> resources = new List<ManagedResource>();
