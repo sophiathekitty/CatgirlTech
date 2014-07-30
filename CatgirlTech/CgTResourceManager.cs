@@ -158,6 +158,7 @@ namespace CatgirlTech
             {
                 Fields["resource_total_amount_display_" + ri].guiActive = false;
             }
+            updateFreeSpace();
         }
         private void setResourceTotalAmountDisplay(int i, string display_amount)
         {
@@ -223,11 +224,16 @@ namespace CatgirlTech
                 }
                 else if (res != null && resources[i].managed)
                 {
+                    //
+                    // handle resource balancing
+                    //
+                    PartResource freeSpace = getResource(this.part, "InternalTransferSpace");
+                    // fast intake
                     if (fastIntake)
                     {
-                        double available_space = getResourceMaxAmount(res.resourceName) - getResourceAmount(res.resourceName) + 1;
-                        if (available_space < 1)
-                            available_space = 1;
+                        double available_space = getResourceMaxAmount(res.resourceName) - getResourceAmount(res.resourceName) + freeSpace.maxAmount / (managed_resource_count + 1);
+                        if (available_space < freeSpace.maxAmount / (managed_resource_count + 1) )
+                            available_space = freeSpace.maxAmount / (managed_resource_count + 1);
                         if (available_space > res.amount)
                         {
                             res.maxAmount = available_space;
@@ -235,11 +241,16 @@ namespace CatgirlTech
                     }
                     else
                         res.maxAmount = 1;
+                    
+                    
                     // here's where we can do the stuff where we keep it at 0.5
-                    if (managed_parts_count > 0 && (res.amount < 0.2 || res.amount > 0.8)){
+                    if (managed_parts_count > 0 && (res.amount == res.maxAmount || res.amount < 0.2 || res.amount > freeSpace.maxAmount / (managed_resource_count + 1) - 0.1))
+                    {
                         // push res out to a managed part
                         internalResourceTransfer(res, 0.5 - res.amount);
                     }
+                    
+
                 }
             }
 
@@ -305,9 +316,27 @@ namespace CatgirlTech
 
         }
 
+        private void updateFreeSpace()
+        {
+            // freeSpace represents the real space that resources can take up.
+            PartResource freeSpace = getResource(this.part, "InternalTransferSpace");
+            freeSpace.amount = freeSpace.maxAmount;
+            for (int i = 0; i < resources.Count; i++)
+            {
+                if (resources[i].managed)
+                {
+                    PartResource mRes = getResource(this.part, resources[i].name);
+                    var res_def = PartResourceLibrary.Instance.GetDefinition(resources[i].name);
+                    freeSpace.amount -= mRes.amount;
+                }
+            }
+
+        }
         // internal transfer
         private void internalResourceTransfer(PartResource res, double amount)
         {
+            
+            updateFreeSpace();
             for (int i = 0; i < managed_parts.Count; i++)
             {
                 if (managed_parts[i].managed)
@@ -325,6 +354,7 @@ namespace CatgirlTech
                     }
                 }
             }
+            updateFreeSpace();
         }
 
         //
@@ -484,15 +514,19 @@ namespace CatgirlTech
                     GUILayout.BeginVertical();
                     for (int i = 0; i < managed_parts.Count(); i++)
                     {
-                        managed_parts[i].managed = GUILayout.Toggle(managed_parts[i].managed, managed_parts[i].part.partInfo.title);
-                        if (Event.current.type == EventType.Repaint &&
-                           GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
+                        if (managed_parts[i].hasManagedResources(resources))
                         {
-                            managed_parts[i].part.SetHighlight(true);
-                        }
-                        else
-                        {
-                            managed_parts[i].part.SetHighlight(false);
+                            managed_parts[i].managed = GUILayout.Toggle(managed_parts[i].managed, managed_parts[i].part.partInfo.title);
+                            if (Event.current.type == EventType.Repaint &&
+                               GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
+                            {
+                                managed_parts[i].part.SetHighlight(true);
+                            }
+                            else
+                            {
+                                managed_parts[i].part.SetHighlight(false);
+                            }
+
                         }
                     }
                     GUILayout.EndVertical();
@@ -602,6 +636,19 @@ namespace CatgirlTech
             {
                 part = _part;
                 managed = _managed;
+            }
+
+            public bool hasManagedResources(List<ManagedResource> resources)
+            {
+                foreach (ManagedResource r in resources)
+                {
+                    if (r.managed && getResource(part, r.name))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
             
             // to string
