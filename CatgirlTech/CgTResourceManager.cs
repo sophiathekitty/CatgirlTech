@@ -451,7 +451,9 @@ namespace CatgirlTech
 
         private uint guiWindowMode = 0;
         private Vector2 scrollPosition;
-        private bool blah;
+
+
+
 
         private void WindowGUI(int windowID)
         {
@@ -471,6 +473,10 @@ namespace CatgirlTech
             GUIStyle nSty = new GUIStyle(GUI.skin.label);
             nSty.normal.textColor = hdSty.focused.textColor = Color.yellow;
             nSty.fontSize = 10;
+            GUIStyle dblToggSty = new GUIStyle(GUI.skin.toggle);
+            dblToggSty.normal.textColor = dblToggSty.focused.textColor = dblToggSty.hover.textColor = Color.gray;
+            dblToggSty.active.textColor = Color.yellow;
+
 
             // scroll area options
 
@@ -491,7 +497,10 @@ namespace CatgirlTech
                     GUILayout.BeginVertical();
                     for (int i = 0; i < resources.Count(); i++)
                     {
-                        resources[i].managed = GUILayout.Toggle(resources[i].managed, resources[i].name);
+                        if (resources[i].managed || managed_resource_count < maxManagedResources)
+                            resources[i].managed = GUILayout.Toggle(resources[i].managed, resources[i].name);
+                        else
+                            GUILayout.Toggle(false,resources[i].name, dblToggSty);
                         if (Event.current.type == EventType.Repaint &&
                            GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
                         {
@@ -516,7 +525,10 @@ namespace CatgirlTech
                     {
                         if (managed_parts[i].hasManagedResources(resources))
                         {
-                            managed_parts[i].managed = GUILayout.Toggle(managed_parts[i].managed, managed_parts[i].part.partInfo.title);
+                            if (managed_parts[i].managed || managed_parts_count < maxManagedParts)
+                                managed_parts[i].managed = GUILayout.Toggle(managed_parts[i].managed, managed_parts[i].part.partInfo.title);
+                            else
+                                GUILayout.Toggle(false,managed_parts[i].part.partInfo.title, dblToggSty);
                             if (Event.current.type == EventType.Repaint &&
                                GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition))
                             {
